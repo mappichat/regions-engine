@@ -18,8 +18,7 @@
 *.geojson
 *.bin
 
-!config.json
-!countries.geojson
+!configs/*
 
 .env
 
