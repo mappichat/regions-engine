@@ -5,7 +5,6 @@ export
 # Environment variables. These can optionally be set in your environment.
 # If not set, they will default to the values seen here.
 RES := $(or $(RES),5)
-DIR := $(or $(DIR),./data/resolution${RES})
 DB_STRING := $(or $(DB_STRING),"host=localhost port=5432 user=postgres password=password dbname=postgres sslmode=disable")
 PORT := $(or $(PORT),8080)
 COUNTRIES_GEOJSON_LOCATION := $(or $(COUNTRIES_GEOJSON_LOCATION),https://storage.googleapis.com/regions-data/countries.geojson)
@@ -29,11 +28,10 @@ docker-generate:
 	docker-compose up generate --build
 
 serve:
-	go run ./src/main.go serve ${DIR} \
+	go run ./src/main.go serve ${DATA_DESTINATION} \
 	-p ${PORT}
 
 build:
-	echo ${RES}
 	go build -o ./bin/region-engine.bin ./src/main.go
 
 build-generate:
@@ -44,11 +42,11 @@ build-generate:
 	-c ${CONFIG_LOCATION}
 
 build-serve:
-	./bin/region-engine.bin serve ${DIR} \
+	./bin/region-engine.bin serve ${DATA_DESTINATION} \
 	-p ${PORT}
 
 populate-db:
-	./bin/region-engine.bin dbwrite ${DIR} ${DB_STRING}
+	./bin/region-engine.bin dbwrite ${DATA_DESTINATION} ${DB_STRING}
 
 db:
 	docker-compose up adminer postgres
