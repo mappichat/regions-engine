@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  generate:
+    build:
+      context: .
+    environment:
+      - RES=${RES}
+      - COUNTRIES_GEOJSON_LOCATION=${COUNTRIES_GEOJSON_LOCATION}
+      - POPMAP_LOCATION=${POPMAP_LOCATION}
+      - CONFIG_LOCATION=${CONFIG_LOCATION}
+    volumes:
+      - ${DATA_DESTINATION}:/output
+
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - 5432:5432
+    networks:
+      app:
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      app:
+
+networks:
+  app:
