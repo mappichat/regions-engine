@@ -63,7 +63,7 @@ func ReadJsonFile(filePath string, dest interface{}) error {
 	var bytes = []byte{}
 	var err error
 	if FileExists(filePath) {
-		bytes, err = os.ReadFile(filePath)
+		bytes, err = os.ReadFile(path.Join(filePath))
 		if err != nil {
 			return err
 		}

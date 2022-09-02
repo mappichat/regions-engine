@@ -12,12 +12,12 @@ services:
     volumes:
       - ${DATA_DESTINATION}:/output
   
-  redis:
-    image: redis
+  pop-db:
+    build:
+      context: .
+      dockerfile: ./Docker/pop-db.dockerfile
     networks:
       - app
-    ports:
-      - 6379:6379
 
   postgres:
     image: postgres

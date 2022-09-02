@@ -1,4 +1,4 @@
-# /host should map to the volume you want to store the data (assuming it's on the same system as container)
+# /output should map to the volume you want to store the data (assuming it's on the same system as container)
 # If where you're storing is a remote host, don't even bother setting a volume. The destination var
 # should point to an scp destination.
 

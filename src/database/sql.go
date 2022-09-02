@@ -76,7 +76,7 @@ func PopulateTiles(db *sqlx.DB, levels []map[string]project_types.Region) error 
 	for i := range levels {
 		wg.Add(1)
 		go func(index int) {
-			populateTile(db, index, &levels[index])
+			PopulateTile(db, index, &levels[index])
 			wg.Done()
 		}(i)
 	}
@@ -84,7 +84,7 @@ func PopulateTiles(db *sqlx.DB, levels []map[string]project_types.Region) error 
 	return nil
 }
 
-func populateTile(db *sqlx.DB, levelIndex int, level *map[string]project_types.Region) error {
+func PopulateTile(db *sqlx.DB, levelIndex int, level *map[string]project_types.Region) error {
 	batchSize := maxInsert / 3
 
 	values := []map[string]interface{}{}
@@ -112,7 +112,7 @@ func PopulateNeighbors(db *sqlx.DB, levels []map[string]project_types.Region) er
 	for i := range levels {
 		wg.Add(1)
 		go func(index int) {
-			populateNeighbor(db, index, &levels[index])
+			PopulateNeighbor(db, index, &levels[index])
 			wg.Done()
 		}(i)
 	}
@@ -128,7 +128,7 @@ func hashPair(h1 string, h2 string) string {
 	}
 }
 
-func populateNeighbor(db *sqlx.DB, levelIndex int, level *map[string]project_types.Region) error {
+func PopulateNeighbor(db *sqlx.DB, levelIndex int, level *map[string]project_types.Region) error {
 	batchSize := maxInsert / 3
 	seen := map[string]bool{}
 	values := []map[string]interface{}{}

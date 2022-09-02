@@ -12,6 +12,9 @@ POPMAP_LOCATION := $(or $(POPMAP_LOCATION),https://storage.googleapis.com/region
 CONFIG_LOCATION := $(or $(CONFIG_LOCATION),https://storage.googleapis.com/regions-data/resolution5/config.json)
 DATA_DESTINATION := $(or $(DATA_DESTINATION),./output)
 
+H3_TO_COUNTRIES := $(or $(H3_TO_COUNTRIES),https://storage.googleapis.com/regions-data/test/h3ToCountry.json)
+LEVEL_PATHS := $(or $(LEVEL_PATHS),https://storage.googleapis.com/regions-data/test/level0.json,https://storage.googleapis.com/regions-data/test/level1.json,https://storage.googleapis.com/regions-data/test/level2.json,https://storage.googleapis.com/regions-data/test/level3.json,https://storage.googleapis.com/regions-data/test/level4.json,https://storage.googleapis.com/regions-data/test/level5.json)
+
 # If you are trying above res 6 you may need to use the -m flag
 generate:
 	go run ./src/main.go generate ${COUNTRIES_GEOJSON_LOCATION} \
@@ -43,11 +46,20 @@ build-generate:
 	-c ${CONFIG_LOCATION}
 
 build-serve:
-	./bin/region-engine.bin serve ${DATA_DESTINATION} \
+	./bin/region-engine.bin serve "${DATA_DESTINATION}" \
 	-p ${PORT}
 
-populate-db:
-	./bin/region-engine.bin dbwrite ${DATA_DESTINATION} ${DB_STRING}
+pop-db:
+	go run ./src/main.go dbwrite ${DB_STRING} ${H3_TO_COUNTRIES} ${LEVEL_PATHS}
+
+docker-pop-db:
+	docker-compose up pop-db --build
 
 db:
 	docker-compose up adminer postgres
+
+vol-prune:
+	echo y | docker volume prune
+
+down:
+	docker-compose down

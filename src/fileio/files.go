@@ -175,6 +175,14 @@ func PopMapStats(popmap project_types.PopMap) (float64, float64) {
 	return mean, stddev
 }
 
+func ReadLevel(filePath string) (map[string]project_types.Region, error) {
+	level := project_types.Level{}
+	if err := utils.ReadJsonFile(filePath, &level); err != nil {
+		return nil, err
+	}
+	return level, nil
+}
+
 func ReadLevels(dirPath string) ([]map[string]project_types.Region, []map[string]string) {
 	matches, err := filepath.Glob(path.Join(dirPath, "level*.json"))
 	if err != nil {
@@ -231,23 +239,31 @@ func WriteCountryMaps(countryPolygons project_types.CountryPolygons, countryToH3
 	return nil
 }
 
+func ReadH3ToCountry(filePath string) (project_types.H3ToCountry, error) {
+	h3ToCountry := project_types.H3ToCountry{}
+	if err := utils.ReadJsonFile(filePath, &h3ToCountry); err != nil {
+		return nil, err
+	}
+	return h3ToCountry, nil
+}
+
 func ReadCountryMaps(dirName string) (project_types.CountryPolygons, project_types.CountryToH3, project_types.H3ToCountry, error) {
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 	errs := [3]error{}
 	countryPolygons := project_types.CountryPolygons{}
 	go func() {
-		errs[0] = utils.ReadJsonFile(path.Join(dirName, "countryPolygons.json"), &countryPolygons)
+		errs[0] = utils.ReadJsonFile(dirName+"/countryPolygons.json", &countryPolygons)
 		wg.Done()
 	}()
 	countryToH3 := project_types.CountryToH3{}
 	go func() {
-		errs[1] = utils.ReadJsonFile(path.Join(dirName, "countryToH3.json"), &countryToH3)
+		errs[1] = utils.ReadJsonFile(dirName+"/countryToH3.json", &countryToH3)
 		wg.Done()
 	}()
 	h3ToCountry := project_types.H3ToCountry{}
 	go func() {
-		errs[2] = utils.ReadJsonFile(path.Join(dirName, "h3ToCountry.json"), &h3ToCountry)
+		errs[2] = utils.ReadJsonFile(dirName+"/h3ToCountry.json", &h3ToCountry)
 		wg.Done()
 	}()
 	wg.Wait()

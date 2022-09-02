@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/mappichat/regions-engine/src/database"
@@ -125,11 +128,14 @@ func main() {
 
 		server.RunServer(levels, parents, h3ToCountry, countryToH3, countryPolygons, port)
 	case "dbwrite":
-		if len(os.Args) < 4 {
-			log.Fatal("dbwrite subcommand has two argument: [data-directory] [sql-connection-string]")
+		if len(os.Args) < 5 {
+			log.Fatal("dbwrite subcommand has three arguments: [sql-connection-string] [h3ToCountryPath] [levelPaths (comma seperated)]")
 		}
-		dataDir := os.Args[2]
-		connectionString := os.Args[3]
+
+		connectionString := os.Args[2]
+		log.Print(connectionString)
+		h3ToCountryPath := os.Args[3]
+		levelPaths := strings.Split(os.Args[4], ",")
 
 		// cmd := flag.NewFlagSet("dbwrite", flag.ExitOnError)
 		// var tableName string
@@ -146,8 +152,8 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Print("reading country maps from json")
-		if _, _, h3ToCountry, err := fileio.ReadCountryMaps(dataDir); err == nil {
+		log.Print("reading country map from json")
+		if h3ToCountry, err := fileio.ReadH3ToCountry(h3ToCountryPath); err == nil {
 			log.Print("populating countries")
 			if err := database.PopulateCountries(db, &h3ToCountry); err != nil {
 				log.Fatal(err)
@@ -155,17 +161,54 @@ func main() {
 		} else {
 			log.Fatal(err)
 		}
+		if err = db.Close(); err != nil {
+			log.Fatal(err)
+		}
 
-		log.Print("reading levels and parents from json files")
-		levels, _ := fileio.ReadLevels(dataDir)
-		log.Print("populating tiles")
-		if err := database.PopulateTiles(db, levels); err != nil {
-			log.Fatal(err)
+		log.Print("populating tiles and neighbors")
+		processes := runtime.GOMAXPROCS(runtime.NumCPU())
+		log.Printf("max processes running: %d\n", processes)
+		wg := sync.WaitGroup{}
+		guard := make(chan struct{}, processes)
+
+		for i := range levelPaths {
+			log.Printf("PATH %s\n", levelPaths[i])
+			wg.Add(1)
+			go func(levelIndex int) {
+				guard <- struct{}{}
+				dbConnect, err := database.SqlInitialize(connectionString)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Printf("reading level %d\n", levelIndex)
+				level, err := fileio.ReadLevel(levelPaths[levelIndex])
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Printf("populating tiles for %d\n", levelIndex)
+				if err := database.PopulateTile(dbConnect, levelIndex, &level); err != nil {
+					log.Fatal(err)
+				}
+				log.Printf("populating neighbors for %d\n", levelIndex)
+				if err := database.PopulateNeighbor(dbConnect, levelIndex, &level); err != nil {
+					log.Fatal(err)
+				}
+				wg.Done()
+				<-guard
+			}(i)
 		}
-		log.Print("populating neighbors")
-		if err := database.PopulateNeighbors(db, levels); err != nil {
-			log.Fatal(err)
-		}
+		wg.Wait()
+
+		// log.Print("reading levels and parents from json files")
+		// levels, _ := fileio.ReadLevels(dataDir)
+		// log.Print("populating tiles")
+		// if err := database.PopulateTiles(db, levels); err != nil {
+		// 	log.Fatal(err)
+		// }
+		// log.Print("populating neighbors")
+		// if err := database.PopulateNeighbors(db, levels); err != nil {
+		// 	log.Fatal(err)
+		// }
 
 		log.Print(time.Since(startTime))
 	default:
