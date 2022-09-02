@@ -12,6 +12,7 @@ POPMAP_LOCATION := $(or $(POPMAP_LOCATION),https://storage.googleapis.com/region
 CONFIG_LOCATION := $(or $(CONFIG_LOCATION),https://storage.googleapis.com/regions-data/resolution5/config.json)
 DATA_DESTINATION := $(or $(DATA_DESTINATION),./output)
 
+# If you are trying above res 6 you may need to use the -m flag
 generate:
 	go run ./src/main.go generate ${COUNTRIES_GEOJSON_LOCATION} \
 	-r ${RES} \

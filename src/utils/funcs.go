@@ -51,10 +51,27 @@ func WriteAsJsonFile(v interface{}, filePath string) error {
 	return nil
 }
 
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
 func ReadJsonFile(filePath string, dest interface{}) error {
-	bytes := []byte{}
-	url, err := url.ParseRequestURI(filePath)
-	if err == nil { // filePath is a url
+	var bytes = []byte{}
+	var err error
+	if FileExists(filePath) {
+		bytes, err = os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+	} else {
+		url, err := url.ParseRequestURI(filePath)
+		if err != nil {
+			return err
+		}
 		resp, err := http.Get(url.String())
 		if err != nil {
 			return err
@@ -63,15 +80,12 @@ func ReadJsonFile(filePath string, dest interface{}) error {
 		if resp.StatusCode != http.StatusOK {
 			return fmt.Errorf("unexpected http GET status: %s", resp.Status)
 		}
-		if bytes, err = io.ReadAll(resp.Body); err != nil {
-			return err
-		}
-	} else { // filePath may be os path
-		bytes, err = os.ReadFile(filePath)
+		bytes, err = io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
 	}
+
 	if err = json.Unmarshal(bytes, &dest); err != nil {
 		return err
 	}

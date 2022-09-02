@@ -11,6 +11,13 @@ services:
       - CONFIG_LOCATION=${CONFIG_LOCATION}
     volumes:
       - ${DATA_DESTINATION}:/output
+  
+  redis:
+    image: redis
+    networks:
+      - app
+    ports:
+      - 6379:6379
 
   postgres:
     image: postgres

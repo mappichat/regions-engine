@@ -8,122 +8,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-playground/validator"
-	"github.com/gofiber/fiber/v2"
 	"github.com/mappichat/regions-engine/src/database"
 	"github.com/mappichat/regions-engine/src/engine"
 	"github.com/mappichat/regions-engine/src/fileio"
 	"github.com/mappichat/regions-engine/src/project_types"
+	"github.com/mappichat/regions-engine/src/server"
 	"github.com/mappichat/regions-engine/src/utils"
 )
-
-var validate = validator.New()
-
-func runServer(
-	levels []map[string]project_types.Region,
-	parents []map[string]string,
-	h3ToCountry project_types.H3ToCountry,
-	countryToH3 project_types.CountryToH3,
-	countryPolygons project_types.CountryPolygons,
-	port int,
-) {
-	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Healthy")
-	})
-
-	app.Post("/regions", func(c *fiber.Ctx) error {
-		log.Printf("/regions: %s\n", time.Now())
-		payload := struct {
-			Tiles  []string `json:"tiles" validate:"required"`
-			Levels []int    `json:"levels" validate:"required"`
-		}{}
-
-		if err := c.BodyParser(&payload); err != nil {
-			return err
-		}
-		if err := validate.Struct(payload); err != nil {
-			return err
-		}
-
-		regions := map[int]map[string][]string{}
-
-		for _, level := range payload.Levels {
-			regions[level] = map[string][]string{}
-			for _, tile := range payload.Tiles {
-				parent := parents[level][tile]
-				regions[level][parent] = levels[level][parent].Tiles
-			}
-		}
-
-		return c.JSON(regions)
-	})
-
-	app.Post("/ring", func(c *fiber.Ctx) error {
-		log.Printf("/ring: %s\n", time.Now())
-		payload := struct {
-			Tile   string `json:"tile" validate:"required"`
-			Level  int    `json:"level"`
-			Radius int    `json:"radius"`
-		}{}
-
-		if err := c.BodyParser(&payload); err != nil {
-			return err
-		}
-		if err := validate.Struct(payload); err != nil {
-			return err
-		}
-
-		regions := map[string][]string{}
-
-		center := parents[payload.Level][payload.Tile]
-		r := 0
-		i := 0
-		regionQueue := []string{center}
-		seen := map[string]bool{center: true}
-		for r <= payload.Radius {
-			nextEnd := len(regionQueue)
-			for i < nextEnd {
-				current := regionQueue[i]
-				regions[current] = levels[payload.Level][current].Tiles
-				for neighbor := range levels[payload.Level][current].Neighbors {
-					if _, ok := seen[neighbor]; !ok {
-						regionQueue = append(regionQueue, neighbor)
-						seen[neighbor] = true
-					}
-				}
-				i++
-			}
-			r++
-		}
-
-		log.Print(len(regions))
-
-		return c.JSON(regions)
-	})
-
-	app.Post("/country", func(c *fiber.Ctx) error {
-		log.Printf("/country: %s\n", time.Now())
-		payload := struct {
-			Tile string `json:"tile" validate:"required"`
-		}{}
-
-		if err := c.BodyParser(&payload); err != nil {
-			return err
-		}
-		if err := validate.Struct(payload); err != nil {
-			return err
-		}
-		log.Print(payload.Tile)
-		country := h3ToCountry[payload.Tile]
-		log.Print(country)
-
-		return c.JSON(countryToH3[h3ToCountry[payload.Tile]])
-	})
-
-	log.Fatal(app.Listen(fmt.Sprintf(":%d", port)))
-}
 
 func main() {
 	startTime := time.Now()
@@ -150,10 +41,12 @@ func main() {
 		var popMapPath string
 		var configPath string
 		var outDir string
+		var memsafeStitching bool
 		cmd.IntVar(&resolution, "r", 5, "h3 resolution used to generate regions")
 		cmd.StringVar(&popMapPath, "p", "", "path to popmap file (json)")
 		cmd.StringVar(&configPath, "c", "", "path to engine config file (json)")
 		cmd.StringVar(&outDir, "o", "", "data output directory")
+		cmd.BoolVar(&memsafeStitching, "m", false, "Stitch country level data together one level at a time instead of concurrently. This can prevent crashes from using too much memory at higher resolutions. (Typically >= 7)")
 		cmd.Parse(os.Args[3:])
 
 		if outDir == "" {
@@ -203,7 +96,7 @@ func main() {
 		}
 
 		log.Print("generating levels")
-		err = engine.GenerateAndWriteLevels(popMap, countryToH3, outDir, resolution, options)
+		err = engine.GenerateAndWriteLevels(popMap, countryToH3, outDir, resolution, memsafeStitching, options)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -230,7 +123,7 @@ func main() {
 
 		log.Print(time.Since(startTime))
 
-		runServer(levels, parents, h3ToCountry, countryToH3, countryPolygons, port)
+		server.RunServer(levels, parents, h3ToCountry, countryToH3, countryPolygons, port)
 	case "dbwrite":
 		if len(os.Args) < 4 {
 			log.Fatal("dbwrite subcommand has two argument: [data-directory] [sql-connection-string]")

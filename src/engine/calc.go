@@ -258,7 +258,7 @@ func GenerateLevel(prevLevel map[string]project_types.Region, options *project_t
 	return level, parents
 }
 
-func GenerateAndWriteLevels(popMap project_types.PopMap, countryToH3 project_types.CountryToH3, dirName string, resolution int, options []project_types.LevelOptions) error {
+func GenerateAndWriteLevels(popMap project_types.PopMap, countryToH3 project_types.CountryToH3, dirName string, resolution int, memorySafeStitching bool, options []project_types.LevelOptions) error {
 	log.Print("calculating country centroids")
 	// get country neighbors
 	countryCentroids := map[string]h3.GeoCoord{}
@@ -364,34 +364,13 @@ func GenerateAndWriteLevels(popMap project_types.PopMap, countryToH3 project_typ
 		}
 	}
 
-	// log.Print("generating country levels")
-	// countryLevels := map[string][]project_types.Level{}
-	// countryParents := map[string][]map[string]string{}
-	// for country := range zeroLevels {
-	// 	wg.Add(1)
-	// 	guard <- struct{}{}
-	// 	go func(country string) {
-	// 		prevLevel := zeroLevels[country]
-	// 		for i := 0; i < len(options); i++ {
-	// 			var nextLevel project_types.Level
-	// 			var nextParents map[string]string
-	// 			nextLevel, nextParents = GenerateLevel(prevLevel, &options[i])
-
-	// 			mutex.Lock()
-	// 			countryLevels[country] = append(countryLevels[country], nextLevel)
-	// 			countryParents[country] = append(countryParents[country], nextParents)
-	// 			mutex.Unlock()
-
-	// 			prevLevel = nextLevel
-	// 		}
-	// 		log.Print(country)
-	// 		wg.Done()
-	// 		<-guard
-	// 	}(country)
-	// }
-	// wg.Wait()
-
 	log.Print("stitching global levels")
+	if memorySafeStitching {
+		for i := 0; i < processes-1; i++ {
+			guard <- struct{}{}
+		}
+	}
+
 	count := 0
 	for i := 0; i < len(options); i++ {
 		wg.Add(1)
