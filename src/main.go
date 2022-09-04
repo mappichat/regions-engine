@@ -137,11 +137,6 @@ func main() {
 		h3ToCountryPath := os.Args[3]
 		levelPaths := strings.Split(os.Args[4], ",")
 
-		// cmd := flag.NewFlagSet("dbwrite", flag.ExitOnError)
-		// var tableName string
-		// cmd.StringVar(&tableName, "t", "regions", "serving port")
-		// cmd.Parse(os.Args[3:])
-
 		db, err := database.SqlInitialize(connectionString)
 		if err != nil {
 			log.Fatal(err)
@@ -172,7 +167,6 @@ func main() {
 		guard := make(chan struct{}, processes)
 
 		for i := range levelPaths {
-			log.Printf("PATH %s\n", levelPaths[i])
 			wg.Add(1)
 			go func(levelIndex int) {
 				guard <- struct{}{}
@@ -181,6 +175,7 @@ func main() {
 					log.Fatal(err)
 				}
 				log.Printf("reading level %d\n", levelIndex)
+				log.Printf("LEVEL %d PATH %s\n", levelIndex, levelPaths[levelIndex])
 				level, err := fileio.ReadLevel(levelPaths[levelIndex])
 				if err != nil {
 					log.Fatal(err)
@@ -198,17 +193,6 @@ func main() {
 			}(i)
 		}
 		wg.Wait()
-
-		// log.Print("reading levels and parents from json files")
-		// levels, _ := fileio.ReadLevels(dataDir)
-		// log.Print("populating tiles")
-		// if err := database.PopulateTiles(db, levels); err != nil {
-		// 	log.Fatal(err)
-		// }
-		// log.Print("populating neighbors")
-		// if err := database.PopulateNeighbors(db, levels); err != nil {
-		// 	log.Fatal(err)
-		// }
 
 		log.Print(time.Since(startTime))
 	default:
