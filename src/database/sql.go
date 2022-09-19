@@ -38,15 +38,16 @@ func CreateTables(db *sqlx.DB) error {
 		h3 text,
 		region text,
 		level int,
-		PRIMARY KEY (h3, level)
+		PRIMARY KEY (level, h3)
 	);`); err != nil {
 		return err
 	}
 
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS neighbors (
-		region1 text,
-		region2 text,
-		level int
+		region text,
+		neighbor text,
+		level int,
+		PRIMARY KEY (level, region, neighbor)
 	);`); err != nil {
 		return err
 	}
@@ -130,22 +131,17 @@ func hashPair(h1 string, h2 string) string {
 
 func PopulateNeighbor(db *sqlx.DB, levelIndex int, level *map[string]project_types.Region) error {
 	batchSize := maxInsert / 3
-	seen := map[string]bool{}
 	values := []map[string]interface{}{}
 	for h3 := range *level {
 		for neighbor := range (*level)[h3].Neighbors {
-			hash := hashPair(h3, neighbor)
-			if _, ok := seen[hash]; !ok {
-				values = append(values, map[string]interface{}{"region1": h3, "region2": neighbor, "level": levelIndex})
-				seen[hash] = true
-			}
+			values = append(values, map[string]interface{}{"region": h3, "neighbor": neighbor, "level": levelIndex})
 		}
 	}
 	total := len(values)
 	for i := 0; i < len(values); i += batchSize {
 		fmt.Printf(" %f%%\r", 100*(float64(i)/float64(total)))
 		if _, err := db.NamedExec(
-			`INSERT INTO neighbors (region1, region2, level) VALUES (:region1, :region2, :level)`,
+			`INSERT INTO neighbors (region, neighbor, level) VALUES (:region, :neighbor, :level)`,
 			values[i:int(math.Min(float64(len(values)), float64(i+batchSize)))],
 		); err != nil {
 			log.Fatal(err)

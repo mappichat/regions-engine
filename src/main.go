@@ -134,7 +134,7 @@ func main() {
 
 		connectionString := os.Args[2]
 		log.Print(connectionString)
-		h3ToCountryPath := os.Args[3]
+		// h3ToCountryPath := os.Args[3]
 		levelPaths := strings.Split(os.Args[4], ",")
 
 		db, err := database.SqlInitialize(connectionString)
@@ -147,18 +147,18 @@ func main() {
 			log.Fatal(err)
 		}
 
-		log.Print("reading country map from json")
-		if h3ToCountry, err := fileio.ReadH3ToCountry(h3ToCountryPath); err == nil {
-			log.Print("populating countries")
-			if err := database.PopulateCountries(db, &h3ToCountry); err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			log.Fatal(err)
-		}
-		if err = db.Close(); err != nil {
-			log.Fatal(err)
-		}
+		// log.Print("reading country map from json")
+		// if h3ToCountry, err := fileio.ReadH3ToCountry(h3ToCountryPath); err == nil {
+		// 	log.Print("populating countries")
+		// 	if err := database.PopulateCountries(db, &h3ToCountry); err != nil {
+		// 		log.Fatal(err)
+		// 	}
+		// } else {
+		// 	log.Fatal(err)
+		// }
+		// if err = db.Close(); err != nil {
+		// 	log.Fatal(err)
+		// }
 
 		log.Print("populating tiles and neighbors")
 		processes := runtime.GOMAXPROCS(runtime.NumCPU())
@@ -180,10 +180,10 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-				log.Printf("populating tiles for %d\n", levelIndex)
-				if err := database.PopulateTile(dbConnect, levelIndex, &level); err != nil {
-					log.Fatal(err)
-				}
+				// log.Printf("populating tiles for %d\n", levelIndex)
+				// if err := database.PopulateTile(dbConnect, levelIndex, &level); err != nil {
+				// 	log.Fatal(err)
+				// }
 				log.Printf("populating neighbors for %d\n", levelIndex)
 				if err := database.PopulateNeighbor(dbConnect, levelIndex, &level); err != nil {
 					log.Fatal(err)
