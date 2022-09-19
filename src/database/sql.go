@@ -38,7 +38,7 @@ func CreateTables(db *sqlx.DB) error {
 		h3 text,
 		region text,
 		level int,
-		PRIMARY KEY (level, h3)
+		PRIMARY KEY (level, region, h3)
 	);`); err != nil {
 		return err
 	}
